@@ -43,6 +43,8 @@ jobs:
         path: all-reports
     - name: List downloaded reports
       run: ls -R all-reports
+    - name: List contents of a report directory
+      run: ls -R all-reports/playwright-report-ubuntu-latest-chromium
     - name: Merge Playwright reports
       run: |
         npx playwright merge-reports all-reports/**/playwright-report
