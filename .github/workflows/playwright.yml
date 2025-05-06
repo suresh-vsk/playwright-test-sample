@@ -79,7 +79,15 @@ jobs:
 
         # Check if there are any valid directories
         if [ -s report-dirs.txt ]; then
-          npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')
+          # Ensure paths are absolute for merge-reports
+          while IFS= read -r dir; do
+            echo "$(realpath "$dir")" >> absolute-dirs.txt
+          done < report-dirs.txt
+
+          echo "Absolute directories for merging:"
+          cat absolute-dirs.txt
+
+          npx playwright merge-reports $(cat absolute-dirs.txt | tr '\n' ' ')
           npx playwright show-report
         else
           echo "No valid directories found for merging."
