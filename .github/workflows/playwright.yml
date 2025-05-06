@@ -41,6 +41,8 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: all-reports
+    - name: List downloaded reports
+      run: ls -R all-reports
     - name: Merge Playwright reports
       run: |
         npx playwright merge-reports all-reports/**/playwright-report
