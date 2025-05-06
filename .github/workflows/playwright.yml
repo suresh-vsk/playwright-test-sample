@@ -102,9 +102,16 @@ jobs:
     #     fi
     - name: Merge into HTML Report
       run: npx playwright merge-reports --reporter html ./all-blob-reports
-      
-    - uses: actions/upload-artifact@v4
+
+    # - uses: actions/upload-artifact@v4
+    #   with:
+    #     name: consolidated-playwright-report
+    #     path: playwright-report/
+    #     retention-days: 30
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
       with:
-        name: consolidated-playwright-report
-        path: playwright-report/
-        retention-days: 30
+        name: html-report--attempt-${{ github.run_attempt }}
+        path: playwright-report
+        retention-days: 14
