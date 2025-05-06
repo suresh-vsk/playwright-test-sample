@@ -47,14 +47,26 @@ jobs:
       run: ls -R all-reports/playwright-report-ubuntu-latest-chromium
     - name: Merge Playwright reports
       run: |
-        find all-reports -type d -name "playwright-report-*" > report-dirs.txt
+        # Find all directories named "playwright-report-*"
+        find all-reports -type d -name "playwright-report-*" > all-dirs.txt
+
+        # Filter directories that contain "report.json"
+        > report-dirs.txt
+        while IFS= read -r dir; do
+          if [ -f "$dir/report.json" ]; then
+            echo "$dir" >> report-dirs.txt
+          fi
+        done < all-dirs.txt
+
         echo "Directories found for merging:"
         cat report-dirs.txt
+
+        # Check if there are any valid directories
         if [ -s report-dirs.txt ]; then
           npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')
           npx playwright show-report
         else
-          echo "No directories found for merging."
+          echo "No valid directories found for merging."
           exit 1
         fi
     - name: List report files
