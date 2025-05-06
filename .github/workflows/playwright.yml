@@ -87,7 +87,7 @@ jobs:
           echo "Absolute directories for merging:"
           cat absolute-dirs.txt
 
-          npx playwright merge-reports $(cat absolute-dirs.txt | tr '\n' ' ')
+          npx playwright merge-reports --verbose $(cat absolute-dirs.txt | tr '\n' ' ')
           npx playwright show-report
         else
           echo "No valid directories found for merging."
