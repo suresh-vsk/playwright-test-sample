@@ -24,10 +24,29 @@ jobs:
     - name: Run Playwright tests
       env:
         BROWSER: ${{ matrix.browser }}
-      run: npx playwright test --project=${{ matrix.browser }}
+      run: npx playwright test --project=${{ matrix.browser }} --reporter=html
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
         name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 30
+
+  consolidate-report:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download all reports
+      uses: actions/download-artifact@v4
+      with:
+        path: all-reports
+    - name: Merge Playwright reports
+      run: |
+        npx playwright merge-reports all-reports/**/playwright-report
+        npx playwright show-report
+    - uses: actions/upload-artifact@v4
+      with:
+        name: consolidated-playwright-report
         path: playwright-report/
         retention-days: 30
