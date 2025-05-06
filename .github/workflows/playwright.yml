@@ -50,8 +50,13 @@ jobs:
         find all-reports -type d -name "playwright-report" > report-dirs.txt
         echo "Directories found for merging:"
         cat report-dirs.txt
-        npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')
-        npx playwright show-report
+        if [ -s report-dirs.txt ]; then
+          npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')
+          npx playwright show-report
+        else
+          echo "No directories found for merging."
+          exit 1
+        fi
     - name: List report files
       run: cat report-files.txt
     - name: List report directories
