@@ -48,7 +48,9 @@ jobs:
     - name: Merge Playwright reports
       run: |
         find all-reports -type d -name "playwright-report" > report-dirs.txt
-        npx playwright merge-reports $(cat report-dirs.txt)
+        echo "Directories found for merging:"
+        cat report-dirs.txt
+        npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')
         npx playwright show-report
     - name: List report files
       run: cat report-files.txt
