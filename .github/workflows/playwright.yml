@@ -55,6 +55,8 @@ jobs:
         while IFS= read -r dir; do
           if [ -f "$dir/report.json" ]; then
             echo "$dir" >> report-dirs.txt
+          else
+            echo "Skipping directory $dir as it does not contain report.json"
           fi
         done < all-dirs.txt
 
