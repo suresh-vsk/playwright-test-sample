@@ -4,6 +4,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
   test:
     timeout-minutes: 60
@@ -47,22 +48,17 @@ jobs:
         path: all-reports
     - name: List downloaded reports
       run: ls -R all-reports
-    - name: List contents of a report directory
-      run: ls -R all-reports/playwright-report-ubuntu-latest-chromium
+    - name: List contents of all directories
+      run: |
+        find all-reports -type d -name "playwright-report-*" > all-dirs.txt
+        while IFS= read -r dir; do
+          echo "Contents of $dir:"
+          ls -R "$dir"
+        done < all-dirs.txt
     - name: Merge Playwright reports
       run: |
         # Find all directories named "playwright-report-*"
         find all-reports -type d -name "playwright-report-*" > all-dirs.txt
-
-        # Debug: Inspect report.json files
-        while IFS= read -r dir; do
-          if [ -f "$dir/report.json" ]; then
-            echo "Contents of $dir/report.json:"
-            cat "$dir/report.json"
-          else
-            echo "No report.json found in $dir"
-          fi
-        done < all-dirs.txt
 
         # Filter directories that contain "report.json"
         > report-dirs.txt
@@ -76,6 +72,10 @@ jobs:
 
         echo "Directories found for merging:"
         cat report-dirs.txt
+
+        # Debug: Print merge-reports command
+        echo "Running merge-reports with the following directories:"
+        echo "npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')"
 
         # Check if there are any valid directories
         if [ -s report-dirs.txt ]; then
