@@ -47,7 +47,7 @@ jobs:
       run: ls -R all-reports/playwright-report-ubuntu-latest-chromium
     - name: Merge Playwright reports
       run: |
-        find all-reports -type d -name "playwright-report" > report-dirs.txt
+        find all-reports -type d -name "playwright-report-*" > report-dirs.txt
         echo "Directories found for merging:"
         cat report-dirs.txt
         if [ -s report-dirs.txt ]; then
