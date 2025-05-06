@@ -19,6 +19,8 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
+    - name: Install Playwright
+      run: npm install playwright@1.52.0
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
     - name: Run Playwright tests
@@ -37,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Install Playwright
+      run: npm install playwright@1.52.0
     - name: Download all reports
       uses: actions/download-artifact@v4
       with:
@@ -81,10 +85,6 @@ jobs:
           echo "No valid directories found for merging."
           exit 1
         fi
-    - name: List report files
-      run: cat report-files.txt
-    - name: List report directories
-      run: cat report-dirs.txt
     - uses: actions/upload-artifact@v4
       with:
         name: consolidated-playwright-report
