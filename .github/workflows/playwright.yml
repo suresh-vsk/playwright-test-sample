@@ -53,17 +53,21 @@ jobs:
         path: all-blob-reports
         pattern: blob-report-*
         merge-multiple: true
-
+      
     - name: List downloaded reports
       run: ls -R all-blob-reports
 
-    - name: List contents of all directories
+    - name: Unzip all downloaded reports
       run: |
-        find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
-        while IFS= read -r dir; do
-          echo "Contents of $dir:"
-          ls -R "$dir"
-        done < all-dirs.txt
+          find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
+
+    # - name: List contents of all directories
+    #   run: |
+    #     find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
+    #     while IFS= read -r dir; do
+    #       echo "Contents of $dir:"
+    #       ls -R "$dir"
+    #     done < all-dirs.txt
     # - name: Merge Playwright reports
     #   run: |
     #     # Find all directories named "playwright-report-*"
@@ -103,7 +107,7 @@ jobs:
     #       exit 1
     #     fi
     - name: Merge into HTML Report
-      run: npx playwright merge-reports --config=playwright.config.ts --reporter html ./all-blob-reports
+      run: npx playwright merge-reports --reporter html ./all-blob-reports
 
     # - uses: actions/upload-artifact@v4
     #   with:
