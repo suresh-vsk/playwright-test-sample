@@ -26,7 +26,7 @@ export default defineConfig({
   //   ['html', { outputFolder: 'playwright-report' }],
   //   ['json', { outputFile: 'playwright-report/report.json' }]
   // ],
-  reporter: process.env.CI ? 'blob' : 'html',
+  reporter: [['html', { open: 'never' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
