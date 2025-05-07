@@ -53,15 +53,17 @@ jobs:
         path: all-blob-reports
         pattern: blob-report-*
         merge-multiple: true
-    # - name: List downloaded reports
-    #   run: ls -R all-reports
-    # - name: List contents of all directories
-    #   run: |
-    #     find all-reports -type d -name "playwright-report-*" > all-dirs.txt
-    #     while IFS= read -r dir; do
-    #       echo "Contents of $dir:"
-    #       ls -R "$dir"
-    #     done < all-dirs.txt
+
+    - name: List downloaded reports
+      run: ls -R all-blob-reports
+
+    - name: List contents of all directories
+      run: |
+        find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
+        while IFS= read -r dir; do
+          echo "Contents of $dir:"
+          ls -R "$dir"
+        done < all-dirs.txt
     # - name: Merge Playwright reports
     #   run: |
     #     # Find all directories named "playwright-report-*"
