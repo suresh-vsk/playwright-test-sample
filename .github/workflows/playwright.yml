@@ -55,6 +55,13 @@ jobs:
         pattern: blob-report-*
         merge-multiple: true
 
+    - name: List downloaded reports
+      run: ls -R all-blob-reports
+  
+    - name: Unzip all downloaded reports
+      run: |
+            find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
+
     - name: Merge into HTML Report
       run: npx playwright merge-reports --reporter html ./all-blob-reports
 
