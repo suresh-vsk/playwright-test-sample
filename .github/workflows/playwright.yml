@@ -121,8 +121,32 @@ jobs:
 
     - name: Merge into HTML Report
       run: |
-        # Run merge-reports with the prepared directory
-        npx playwright merge-reports --reporter html ./merged-reports
+        # Try each approach in sequence until one works
+        
+        # Approach 1: Direct merge
+        echo "Trying direct merge with HTML reporter..."
+        npx playwright merge-reports --reporter html ./merged-reports || true
+        
+        # Check if report was generated
+        if [ ! -d "playwright-report" ]; then
+          echo "Direct merge failed, trying with custom config..."
+          
+          # Approach 2: Use custom config
+          cat > merge-config.js << 'EOL'
+          module.exports = {
+            reporter: [['html', { outputFolder: 'playwright-report' }]],
+          };
+          EOL
+          
+          npx playwright merge-reports --config merge-config.js ./merged-reports || true
+        fi
+        
+        # Final check and fallback
+        if [ ! -d "playwright-report" ]; then
+          echo "All merge attempts failed, creating basic report..."
+          mkdir -p playwright-report
+          echo "<html><body><h1>Test Report</h1><p>Found $(find ./merged-reports -name "*.jsonl" | wc -l) JSONL files but could not merge them.</p></body></html>" > playwright-report/index.html
+        fi
     
     - name: Upload HTML report
       uses: actions/upload-artifact@v4
