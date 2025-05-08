@@ -45,8 +45,8 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    - name: Install Playwright
-      run: npm install playwright@1.52.0
+    # - name: Install Playwright
+    #   run: npm install playwright@1.52.0
     - name: Download all reports
       uses: actions/download-artifact@v4
       with:
@@ -57,27 +57,63 @@ jobs:
     - name: List downloaded reports
       run: ls -R all-blob-reports
 
-    - name: Extract all blob reports to merged directory
+    - name: Unzip all downloaded reports
       run: |
-        mkdir -p merged-blob-reports
-        find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d merged-blob-reports \;
-    
-    - name: List extracted reports
-      run: |
-        echo "Extracted blob reports:"
-        ls -R merged-blob-reports
+          find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
 
-    - name: Find blob report files
-      run: |
-        echo "Looking for blob report files..."
-        find merged-blob-reports -type f -name "*.jsonl" || echo "No .jsonl files found"
-        find merged-blob-reports -type f -name "trace.zip" || echo "No trace.zip files found"
-        find merged-blob-reports -type f -name "*.trace" || echo "No .trace files found"
+    # - name: List contents of all directories
+    #   run: |
+    #     find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
+    #     while IFS= read -r dir; do
+    #       echo "Contents of $dir:"
+    #       ls -R "$dir"
+    #     done < all-dirs.txt
+    # - name: Merge Playwright reports
+    #   run: |
+    #     # Find all directories named "playwright-report-*"
+    #     find all-reports -type d -name "playwright-report-*" > all-dirs.txt
 
+    #     # Filter directories that contain "report.json"
+    #     > report-dirs.txt
+    #     while IFS= read -r dir; do
+    #       if [ -f "$dir/report.json" ]; then
+    #         echo "$dir" >> report-dirs.txt
+    #       else
+    #         echo "Skipping directory $dir as it does not contain report.json"
+    #       fi
+    #     done < all-dirs.txt
+
+    #     echo "Directories found for merging:"
+    #     cat report-dirs.txt
+
+    #     # Debug: Print merge-reports command
+    #     echo "Running merge-reports with the following directories:"
+    #     echo "npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')"
+
+    #     # Check if there are any valid directories
+    #     if [ -s report-dirs.txt ]; then
+    #       # Ensure paths are absolute for merge-reports
+    #       while IFS= read -r dir; do
+    #         echo "$(realpath "$dir")" >> absolute-dirs.txt
+    #       done < report-dirs.txt
+
+    #       echo "Absolute directories for merging:"
+    #       cat absolute-dirs.txt
+
+    #       npx playwright merge-reports --verbose $(cat absolute-dirs.txt | tr '\n' ' ')
+    #       npx playwright show-report
+    #     else
+    #       echo "No valid directories found for merging."
+    #       exit 1
+    #     fi
     - name: Merge into HTML Report
-      run: |
-        echo "Merging reports..."
-        npx playwright merge-reports --reporter html merged-blob-reports
+      run: npx playwright merge-reports --verbose --reporter=html --config=playwright.config.ts ./all-blob-reports
+
+    # - uses: actions/upload-artifact@v4
+    #   with:
+    #     name: consolidated-playwright-report
+    #     path: playwright-report/
+    #     retention-days: 30
 
     - name: Upload HTML report
       uses: actions/upload-artifact@v4
