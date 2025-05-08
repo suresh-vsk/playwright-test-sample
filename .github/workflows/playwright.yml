@@ -29,7 +29,7 @@ jobs:
         BROWSER: ${{ matrix.browser }}
       run: npx playwright test --project=${{ matrix.browser }}
     - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
+      if: always()
       with:
         name: blob-report-${{ matrix.os }}-${{ matrix.browser }}
         path: blob-report/
@@ -45,79 +45,88 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    # - name: Install Playwright
-    #   run: npm install playwright@1.52.0
+    - name: Install Playwright
+      run: npm install playwright@1.52.0
     - name: Download all reports
       uses: actions/download-artifact@v4
       with:
         path: all-blob-reports
         pattern: blob-report-*
-        merge-multiple: true
+        merge-multiple: false
       
     - name: List downloaded reports
-      run: ls -R all-blob-reports
-
-    - name: Unzip all downloaded reports
       run: |
-          find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
+        echo "Downloaded blob reports:"
+        ls -la all-blob-reports
+    
+    # Create clean working directory
+    - name: Create working directory
+      run: mkdir -p ./merged-reports
 
-    # - name: List contents of all directories
-    #   run: |
-    #     find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
-    #     while IFS= read -r dir; do
-    #       echo "Contents of $dir:"
-    #       ls -R "$dir"
-    #     done < all-dirs.txt
-    # - name: Merge Playwright reports
-    #   run: |
-    #     # Find all directories named "playwright-report-*"
-    #     find all-reports -type d -name "playwright-report-*" > all-dirs.txt
+    # Extract any valid report files (JSONL files are the key for blob reports)
+    - name: Safely extract report files
+      run: |
+        # Process each blob report directory
+        for dir in all-blob-reports/*; do
+          if [ -d "$dir" ]; then
+            echo "Processing $dir"
+            
+            # Try to copy any report.jsonl files directly (non-zipped format)
+            if [ -f "$dir/report.jsonl" ]; then
+              echo "Found report.jsonl in $dir, copying directly"
+              cp "$dir/report.jsonl" "./merged-reports/$(basename "$dir").jsonl"
+            fi
+            
+            # Try to extract from zip files carefully
+            for zip in "$dir"/*.zip; do
+              if [ -f "$zip" ]; then
+                echo "Attempting to extract $zip"
+                # Create a temporary directory for this zip
+                tmp_dir=$(mktemp -d)
+                # Try to unzip, ignore errors
+                unzip -o "$zip" -d "$tmp_dir" || echo "Warning: extraction errors for $zip"
+                
+                # Look for any jsonl files and copy them
+                if [ -f "$tmp_dir/report.jsonl" ]; then
+                  echo "Found report.jsonl in $zip"
+                  cp "$tmp_dir/report.jsonl" "./merged-reports/$(basename "$zip" .zip).jsonl"
+                fi
+                
+                # Copy any trace files if they exist
+                if [ -d "$tmp_dir/resources" ]; then
+                  mkdir -p "./merged-reports/resources"
+                  cp -r "$tmp_dir/resources/"* "./merged-reports/resources/" 2>/dev/null || true
+                fi
+                
+                # Clean up
+                rm -rf "$tmp_dir"
+              fi
+            done
+          fi
+        done
 
-    #     # Filter directories that contain "report.json"
-    #     > report-dirs.txt
-    #     while IFS= read -r dir; do
-    #       if [ -f "$dir/report.json" ]; then
-    #         echo "$dir" >> report-dirs.txt
-    #       else
-    #         echo "Skipping directory $dir as it does not contain report.json"
-    #       fi
-    #     done < all-dirs.txt
+    - name: Check for report files
+      run: |
+        echo "Files in merged-reports directory:"
+        find ./merged-reports -type f | sort
+        
+        # Count JSONL files specifically
+        jsonl_count=$(find ./merged-reports -name "*.jsonl" | wc -l)
+        echo "Found $jsonl_count JSONL report files"
+        
+        if [ "$jsonl_count" -eq 0 ]; then
+          echo "No valid report files found. Check blob report format."
+          exit 1
+        fi
 
-    #     echo "Directories found for merging:"
-    #     cat report-dirs.txt
-
-    #     # Debug: Print merge-reports command
-    #     echo "Running merge-reports with the following directories:"
-    #     echo "npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')"
-
-    #     # Check if there are any valid directories
-    #     if [ -s report-dirs.txt ]; then
-    #       # Ensure paths are absolute for merge-reports
-    #       while IFS= read -r dir; do
-    #         echo "$(realpath "$dir")" >> absolute-dirs.txt
-    #       done < report-dirs.txt
-
-    #       echo "Absolute directories for merging:"
-    #       cat absolute-dirs.txt
-
-    #       npx playwright merge-reports --verbose $(cat absolute-dirs.txt | tr '\n' ' ')
-    #       npx playwright show-report
-    #     else
-    #       echo "No valid directories found for merging."
-    #       exit 1
-    #     fi
     - name: Merge into HTML Report
-      run: npx playwright merge-reports --reporter=html --config=playwright.config.ts ./all-blob-reports
-
-    # - uses: actions/upload-artifact@v4
-    #   with:
-    #     name: consolidated-playwright-report
-    #     path: playwright-report/
-    #     retention-days: 30
-
+      run: |
+        # Run merge-reports with the prepared directory
+        npx playwright merge-reports --reporter html ./merged-reports
+    
     - name: Upload HTML report
       uses: actions/upload-artifact@v4
       with:
-        name: html-report--attempt-${{ github.run_attempt }}
+        name: html-report
         path: playwright-report
         retention-days: 14
