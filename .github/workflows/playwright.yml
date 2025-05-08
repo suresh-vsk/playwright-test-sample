@@ -4,15 +4,15 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
-  playwright-tests:
+  test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        browser: [chromium, firefox, webkit]
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -20,25 +20,23 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-    - name: Install Playwright browsers
+    - name: Install Playwright
+      run: npm install playwright@1.52.0
+    - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-
     - name: Run Playwright tests
-      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-
-    - name: Upload blob report to GitHub Actions Artifacts
+      env:
+        BROWSER: ${{ matrix.browser }}
+      run: npx playwright test --project=${{ matrix.browser }}
+    - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
       with:
-        name: blob-report-${{ matrix.shardIndex }}
-        path: blob-report
-        retention-days: 1
+        name: blob-report-${{ matrix.os }}-${{ matrix.browser }}
+        path: blob-report/
+        retention-days: 30
 
-  merge-reports:
-    # Merge reports after playwright-tests, even if some shards have failed
-    if: ${{ !cancelled() }}
-    needs: [playwright-tests]
-
+  consolidate-report:
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -47,23 +45,75 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
-
-    - name: Download blob reports from GitHub Actions Artifacts
+    # - name: Install Playwright
+    #   run: npm install playwright@1.52.0
+    - name: Download all reports
       uses: actions/download-artifact@v4
       with:
         path: all-blob-reports
         pattern: blob-report-*
         merge-multiple: true
-
+      
     - name: List downloaded reports
       run: ls -R all-blob-reports
-  
+
     - name: Unzip all downloaded reports
       run: |
-            find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
+          find all-blob-reports -type f -name "*.zip" -exec unzip -o {} -d all-blob-reports \;
 
+    # - name: List contents of all directories
+    #   run: |
+    #     find all-blob-reports -type d -name "blob-report-*" > all-dirs.txt
+    #     while IFS= read -r dir; do
+    #       echo "Contents of $dir:"
+    #       ls -R "$dir"
+    #     done < all-dirs.txt
+    # - name: Merge Playwright reports
+    #   run: |
+    #     # Find all directories named "playwright-report-*"
+    #     find all-reports -type d -name "playwright-report-*" > all-dirs.txt
+
+    #     # Filter directories that contain "report.json"
+    #     > report-dirs.txt
+    #     while IFS= read -r dir; do
+    #       if [ -f "$dir/report.json" ]; then
+    #         echo "$dir" >> report-dirs.txt
+    #       else
+    #         echo "Skipping directory $dir as it does not contain report.json"
+    #       fi
+    #     done < all-dirs.txt
+
+    #     echo "Directories found for merging:"
+    #     cat report-dirs.txt
+
+    #     # Debug: Print merge-reports command
+    #     echo "Running merge-reports with the following directories:"
+    #     echo "npx playwright merge-reports $(cat report-dirs.txt | tr '\n' ' ')"
+
+    #     # Check if there are any valid directories
+    #     if [ -s report-dirs.txt ]; then
+    #       # Ensure paths are absolute for merge-reports
+    #       while IFS= read -r dir; do
+    #         echo "$(realpath "$dir")" >> absolute-dirs.txt
+    #       done < report-dirs.txt
+
+    #       echo "Absolute directories for merging:"
+    #       cat absolute-dirs.txt
+
+    #       npx playwright merge-reports --verbose $(cat absolute-dirs.txt | tr '\n' ' ')
+    #       npx playwright show-report
+    #     else
+    #       echo "No valid directories found for merging."
+    #       exit 1
+    #     fi
     - name: Merge into HTML Report
-      run: npx playwright merge-reports --reporter html ./all-blob-reports
+      run: npx playwright merge-reports --reporter=html --config=playwright.config.ts ./all-blob-reports
+
+    # - uses: actions/upload-artifact@v4
+    #   with:
+    #     name: consolidated-playwright-report
+    #     path: playwright-report/
+    #     retention-days: 30
 
     - name: Upload HTML report
       uses: actions/upload-artifact@v4
